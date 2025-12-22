@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -e
 
-# PPHDEVUDP Manager with Remote API License Validation
+# UDP Manager with Remote API License Validation
 # SECURE LOADER SCRIPT
 
 # License API endpoint - Set this before running
-LICENSE_API="https://pphdevapi.free.nf"
+LICENSE_API="http://pphdev/api"
 
 # Colors for output
 tred() { tput setaf 1 2>/dev/null || echo ""; }
@@ -113,6 +113,8 @@ check_permission() {
 # Validate license key via API
 validate_license_key() {
     local key="$1"
+    local server_ip=$(curl -4 -s ifconfig.me 2>/dev/null || hostname -I | awk '{print $1}')
+    local hostname=$(hostname)
     
     echo
     echo -e "$(tblue)═══════════════════════════════════════$(treset)"
@@ -120,27 +122,52 @@ validate_license_key() {
     echo -e "$(tblue)═══════════════════════════════════════$(treset)"
     echo
     
-    local encoded_key="UFBIREVWVURQLTIwMjYtQUU0MjVENjZCNjQ0RTRGQg=="
-    local valid_key=$(echo "$encoded_key" | base64 -d 2>/dev/null)
-    
-    if [[ -z "$valid_key" ]]; then
-        echo -e "$(tred)✗ System error: Cannot decode license key!$(treset)"
+    if [[ -z "$LICENSE_API" ]]; then
+        error "LICENSE_API not set!"
         return 1
     fi
     
-    echo "Checking license key..."
+    echo "Connecting to license server..."
+    echo
     
-    if [[ "$key" == "$valid_key" ]]; then
-        echo -e "$(tgreen)✓ License key validated successfully!$(treset)"
-        echo -e "$(tyellow)✓ Welcome to PPHDEVUDP Manager$(treset)"
-        
-        # Set download URL for Hysteria binary
-        SECURE_DOWNLOAD_URL="https://github.com/apernet/hysteria/releases/download/v1.3.5/hysteria-linux-$ARCHITECTURE"
-        return 0
-    else
-        echo -e "$(tred)✗ Invalid license key!$(treset)"
-        echo -e "$(tyellow)Please enter:$(treset)"
+    local response
+    response=$(curl -s -X POST "$LICENSE_API/validate" \
+        -H "Content-Type: application/json" \
+        -d "{\"licenseKey\":\"$key\",\"hostname\":\"$hostname\",\"ipAddress\":\"$server_ip\"}" \
+        2>&1)
+    
+    if [[ -z "$response" ]]; then
+        error "Cannot verify the key! (No response from server)"
         return 1
+    fi
+    
+    # Use jq (which we installed) for safe parsing
+    local valid=$(echo "$response" | jq -r '.valid // false' 2>/dev/null)
+    
+    if [[ "$valid" == "true" ]]; then
+        # === SECURE MODEL ===
+        # Key မှန်ရင် download_url ကို ရှာမယ်
+        local download_url=$(echo "$response" | jq -r '.download_url // empty' 2>/dev/null)
+        
+        if [[ -z "$download_url" ]]; then
+            echo -e "$(tred)✗ Error: Valid key but no download URL received from API!$(treset)"
+            echo -e "$(tyellow)Please contact administrator (API setup error).$(treset)"
+            return 1
+        fi
+        
+        echo -e "$(tgreen)✓ License key validated successfully!$(treset)"
+        SECURE_DOWNLOAD_URL="$download_url" # Set the global variable
+        return 0 # Success
+    else
+        # Key မှားရင် Error ပြမယ်
+        local error_msg=$(echo "$response" | jq -r '.error // "Unknown error"' 2>/dev/null)
+        local message=$(echo "$response" | jq -r '.message // "No message"' 2>/dev/null)
+        
+        echo -e "$(tred)✗ License validation failed!$(treset)"
+        [[ -n "$error_msg" ]] && echo -e "$(tyellow)Error: $error_msg$(treset)"
+        [[ -n "$message" ]] && echo -e "$(tyellow)Message: $message$(treset)"
+        
+        return 1 # Failure
     fi
 }
 
@@ -149,23 +176,19 @@ prompt_for_license() {
     while true; do
         echo
         echo -e "$(tbold)═══════════════════════════════════════$(treset)"
-        echo -e "$(tcyan)   PPHDEVUDP Manager Installation$(treset)"
+        echo -e "$(tcyan)   UDP Manager Installation$(treset)"
         echo -e "$(tbold)═══════════════════════════════════════$(treset)"
         echo
-        echo -e "$(tyellow)Enter the license key to continue installation:$(treset)"
-        echo -e "$(tyellow)Valid Key: $(treset)"
+        echo -e "$(tyellow)A valid license key is required to install.$(treset)"
         echo
-        echo -n "License key: "
+        echo -n "Enter your license key: "
         read -r LICENSE_KEY
         
         if [[ -z "$LICENSE_KEY" ]]; then
-            echo -e "$(tred)✗ License key cannot be empty!$(treset)"
-            sleep 1
+            echo -e "$(tred)✗ License key cannot be empty!${NC}"
+            sleep 2
             continue
         fi
-        
-        # Trim whitespace and convert to uppercase
-        LICENSE_KEY=$(echo "$LICENSE_KEY" | xargs | tr '[:lower:]' '[:upper:]')
         
         if validate_license_key "$LICENSE_KEY"; then
             # Success, SECURE_DOWNLOAD_URL is now set
@@ -174,7 +197,7 @@ prompt_for_license() {
             # Failure, error messages were already printed
             echo
             echo -e "$(tyellow)Press Enter to try again, or Ctrl+C to cancel...$(treset)"
-            read -n 1 -s
+            read
             clear
         fi
     done
@@ -196,7 +219,7 @@ prompt_for_domain() {
 
 # Prompt for OBFS string before installation
 prompt_for_obfs() {
-    local default_obfs="pphdev"
+    local default_obfs="svpn"
     echo
     echo -n -e "${CYAN}Enter the OBFS string (default: $default_obfs): ${NC}"
     read -r input_obfs
@@ -408,7 +431,7 @@ perform_install() {
 
     echo
     echo -e "${GREEN}═══════════════════════════════════════════════════════$(treset)"
-    echo -e "$(tbold)✓ Congratulations! PPHDEVUDP has been successfully installed!$(treset)"
+    echo -e "$(tbold)✓ Congratulations! UDP has been successfully installed!$(treset)"
     echo -e "${GREEN}═══════════════════════════════════════════════════════$(treset)"
     echo
     echo -e "$(tbold)Quick Start:$(treset)"
