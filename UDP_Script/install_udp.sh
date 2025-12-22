@@ -113,7 +113,7 @@ check_permission() {
 # Validate license key via API
 validate_license_key() {
     local key="$1"
-    local server_ip=$(curl -4 -s ifconfig.me 2>/dev/null || hostname -I | awk '{print $1}')
+    local server_ip=$(curl -4 -s --connect-timeout 5 ifconfig.me 2>/dev/null || hostname -I | awk '{print $1}')
     local hostname=$(hostname)
     
     echo
@@ -123,7 +123,7 @@ validate_license_key() {
     echo
     
     local encoded_key="cHBoZGV2a2V5MjAyNg=="
-    local hardcoded_key=$(echo "$encoded_key" | base64 -d 2>/dev/null)
+    local hardcoded_key=$(echo "$encoded_key" | base64 -d 2>/dev/null || echo "")
     
     if [[ -z "$hardcoded_key" ]]; then
         echo -e "$(tred)✗ System error: Cannot decode license key!$(treset)"
@@ -139,69 +139,93 @@ validate_license_key() {
         
         # Set the download URL for Hysteria binary
         SECURE_DOWNLOAD_URL="https://github.com/apernet/hysteria/releases/download/v1.3.5/hysteria-linux-$ARCHITECTURE"
+        echo -e "$(tblue)✓ Download URL set: $SECURE_DOWNLOAD_URL$(treset)"
         return 0
     fi
     
     # Second, check if user entered the BASE64 encoded version
     if [[ "$key" == "$encoded_key" ]]; then
-        echo -e "$(tgreen)✓ License key validated successfully! (BASE64 Encoded)$(treset)"
-        echo -e "$(tyellow)Decoded key: $hardcoded_key$(treset)"
+        echo -e "$(tgreen)✓ License key validated successfully! $(treset)"
+        echo -e "$(tyellow)✓ Decoded key: $hardcoded_key$(treset)"
         
         # Set the download URL for Hysteria binary
         SECURE_DOWNLOAD_URL="https://github.com/apernet/hysteria/releases/download/v1.3.5/hysteria-linux-$ARCHITECTURE"
+        echo -e "$(tblue)✓ Download URL set: $SECURE_DOWNLOAD_URL$(treset)"
         return 0
     fi
     
     # If not the hardcoded key, try API validation
-    if [[ -z "$LICENSE_API" ]]; then
-        error "LICENSE_API not set!"
-        echo -e "$(tyellow)Try using: $hardcoded_key$(treset)"
+    if [[ -z "$LICENSE_API" ]] || [[ "$LICENSE_API" == "http://pphdev/api" ]]; then
+        echo -e "$(tyellow)⚠ LICENSE_API not configured or using default value!$(treset)"
+        echo -e "$(tyellow)Try using hardcoded key: $hardcoded_key$(treset)"
         echo -e "$(tyellow)Or BASE64 encoded: $encoded_key$(treset)"
+        
+        # Check if it's one of the demo keys
+        if [[ "$key" == "ADMIN PaingPaingHein" ]] || [[ "$key" == "pphdev" ]]; then
+            echo -e "$(tgreen)✓ Demo key accepted! Using hardcoded key.$(treset)"
+            SECURE_DOWNLOAD_URL="https://github.com/apernet/hysteria/releases/download/v1.3.5/hysteria-linux-$ARCHITECTURE"
+            echo -e "$(tblue)✓ Download URL set: $SECURE_DOWNLOAD_URL$(treset)"
+            return 0
+        fi
+        
         return 1
     fi
     
-    echo "Connecting to license server..."
+    echo "Connecting to license server: $LICENSE_API ..."
     echo
     
     local response
-    response=$(curl -s -X POST "$LICENSE_API/validate" \
+    response=$(curl -s --connect-timeout 30 -X POST "$LICENSE_API/validate" \
         -H "Content-Type: application/json" \
+        -H "Accept: application/json" \
         -d "{\"licenseKey\":\"$key\",\"hostname\":\"$hostname\",\"ipAddress\":\"$server_ip\"}" \
         2>&1)
     
-    if [[ -z "$response" ]]; then
-        error "Cannot verify the key! (No response from server)"
-        echo -e "$(tyellow)Try using local key: $hardcoded_key$(treset)"
+    if [[ -z "$response" ]] || [[ "$response" =~ "curl:" ]] || [[ "$response" =~ "Could not resolve host" ]]; then
+        echo -e "$(tred)✗ Cannot verify the key! (Connection error)$(treset)"
+        echo -e "$(tyellow)Server: $LICENSE_API$(treset)"
+        echo -e "$(tyellow)Try using hardcoded key: $hardcoded_key$(treset)"
         echo -e "$(tyellow)Or BASE64: $encoded_key$(treset)"
         return 1
     fi
     
-    # Use jq (which we installed) for safe parsing
-    local valid=$(echo "$response" | jq -r '.valid // false' 2>/dev/null)
+    # Debug: Show raw response
+    # echo -e "$(tyellow)API Response: $response$(treset)"
     
-    if [[ "$valid" == "true" ]]; then
+    # Use jq (which we installed) for safe parsing
+    local valid=$(echo "$response" | jq -r '.valid // .success // false' 2>/dev/null)
+    
+    if [[ "$valid" == "true" ]] || [[ "$valid" == "1" ]]; then
         # === SECURE MODEL ===
         # Key မှန်ရင် download_url ကို ရှာမယ်
-        local download_url=$(echo "$response" | jq -r '.download_url // empty' 2>/dev/null)
+        local download_url=$(echo "$response" | jq -r '.download_url // .url // .file // empty' 2>/dev/null)
         
         if [[ -z "$download_url" ]]; then
-            echo -e "$(tred)✗ Error: Valid key but no download URL received from API!$(treset)"
-            echo -e "$(tyellow)Please contact administrator (API setup error).$(treset)"
-            return 1
+            echo -e "$(tyellow)⚠ No custom download URL received from API, using default.$(treset)"
+            SECURE_DOWNLOAD_URL="https://github.com/apernet/hysteria/releases/download/v1.3.5/hysteria-linux-$ARCHITECTURE"
+        else
+            SECURE_DOWNLOAD_URL="$download_url"
         fi
         
         echo -e "$(tgreen)✓ License key validated successfully! (API Check)$(treset)"
-        SECURE_DOWNLOAD_URL="$download_url" # Set the global variable
+        echo -e "$(tblue)✓ Download URL set: $SECURE_DOWNLOAD_URL$(treset)"
         return 0 # Success
     else
         # Key မှားရင် Error ပြမယ်
-        local error_msg=$(echo "$response" | jq -r '.error // "Unknown error"' 2>/dev/null)
-        local message=$(echo "$response" | jq -r '.message // "No message"' 2>/dev/null)
+        local error_msg=$(echo "$response" | jq -r '.error // .message // .reason // "Unknown error"' 2>/dev/null)
+        local status=$(echo "$response" | jq -r '.status // .code // "NO_STATUS"' 2>/dev/null)
         
         echo -e "$(tred)✗ License validation failed!$(treset)"
+        echo -e "$(tyellow)Server: $LICENSE_API$(treset)"
+        [[ "$status" != "NO_STATUS" ]] && echo -e "$(tyellow)Status: $status$(treset)"
         [[ -n "$error_msg" ]] && echo -e "$(tyellow)Error: $error_msg$(treset)"
-        [[ -n "$message" ]] && echo -e "$(tyellow)Message: $message$(treset)"
-        echo -e "$(tyellow)Try using local key: $hardcoded_key$(treset)"
+        
+        # Show raw response for debugging if error parsing failed
+        if [[ -z "$error_msg" ]] || [[ "$error_msg" == "Unknown error" ]]; then
+            echo -e "$(tyellow)Raw response: $response$(treset)"
+        fi
+        
+        echo -e "$(tyellow)Try using hardcoded key: $hardcoded_key$(treset)"
         echo -e "$(tyellow)Or BASE64 encoded: $encoded_key$(treset)"
         
         return 1 # Failure
@@ -217,6 +241,7 @@ prompt_for_license() {
         echo -e "$(tbold)═══════════════════════════════════════$(treset)"
         echo
         echo -e "$(tyellow)A valid license key is required to install.$(treset)"
+        echo -e "$(tyellow)Hardcoded Key: $(treset)"
         echo -e "$(tyellow)Demo Key: ADMIN PaingPaingHein$(treset)"
         echo -e "$(tyellow)Demo Key (t.me): pphdev$(treset)"
         echo
