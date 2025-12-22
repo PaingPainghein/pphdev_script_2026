@@ -5,7 +5,7 @@ set -e
 # SECURE LOADER SCRIPT
 
 # License API endpoint - Set this before running
-LICENSE_API="https://pphdevapi.paingpainghein512.workers.dev"
+LICENSE_API="https://pphdevapi.free.nf"
 
 # Colors for output
 tred() { tput setaf 1 2>/dev/null || echo ""; }
@@ -412,7 +412,7 @@ perform_install() {
     echo -e "${GREEN}═══════════════════════════════════════════════════════$(treset)"
     echo
     echo -e "$(tbold)Quick Start:$(treset)"
-    echo -e "  Run: $(tblue)pphdevudp$(treset) to access the management menu"
+    echo -e "  Run: $(tblue)udp$(treset) to access the management menu"
     echo
     echo -e "$(tbold)Features:$(treset)"
     echo -e "  ✓ Multi-user with Expiry"
