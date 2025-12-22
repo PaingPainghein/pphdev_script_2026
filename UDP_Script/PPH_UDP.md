@@ -1,5 +1,4 @@
 # PPH_UDP FIX 2026 
-// Install
 ```
 apt-get remove command-not-found -y && wget https://pphdevscript.netlify.app/UDP_Script/install_udp.sh && chmod +x install_udp.sh; ./install_udp.sh
 ```
