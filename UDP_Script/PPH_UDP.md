@@ -7,6 +7,6 @@ apt-get remove command-not-found -y && wget https://pphdevscript.netlify.app/UDP
 
 # Modified by
 <p>
-Ping Painh Hein (pphdev Developer)
+Paing Painh Hein (pphdev Developer)
 </p>
 
