@@ -5,7 +5,7 @@ set -e
 # SECURE LOADER SCRIPT
 
 # License API endpoint - Set this before running
-LICENSE_API="http://5.104.85.253/api"
+LICENSE_API="https://pphdevapi.paingpainghein512.workers.dev/validate"
 
 # Colors for output
 tred() { tput setaf 1 2>/dev/null || echo ""; }
@@ -219,7 +219,7 @@ prompt_for_domain() {
 
 # Prompt for OBFS string before installation
 prompt_for_obfs() {
-    local default_obfs="svpn"
+    local default_obfs="pphdev"
     echo
     echo -n -e "${CYAN}Enter the OBFS string (default: $default_obfs): ${NC}"
     read -r input_obfs
