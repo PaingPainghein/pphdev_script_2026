@@ -219,7 +219,7 @@ prompt_for_domain() {
 
 # Prompt for OBFS string before installation
 prompt_for_obfs() {
-    local default_obfs="svpn"
+    local default_obfs="pphdev"
     echo
     echo -n -e "${CYAN}Enter the OBFS string (default: $default_obfs): ${NC}"
     read -r input_obfs
