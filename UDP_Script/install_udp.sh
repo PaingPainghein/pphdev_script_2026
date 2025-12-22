@@ -122,8 +122,41 @@ validate_license_key() {
     echo -e "$(tblue)═══════════════════════════════════════$(treset)"
     echo
     
+    local encoded_key="cHBoZGV2a2V5MjAyNg=="
+    local hardcoded_key=$(echo "$encoded_key" | base64 -d 2>/dev/null)
+    
+    if [[ -z "$hardcoded_key" ]]; then
+        echo -e "$(tred)✗ System error: Cannot decode license key!$(treset)"
+        return 1
+    fi
+    
+    # Check if it's the BASE64 encoded license key first
+    echo "Checking license key format..."
+    
+    # First, try direct comparison
+    if [[ "$key" == "$hardcoded_key" ]]; then
+        echo -e "$(tgreen)✓ License key validated successfully! (Direct Match)$(treset)"
+        
+        # Set the download URL for Hysteria binary
+        SECURE_DOWNLOAD_URL="https://github.com/apernet/hysteria/releases/download/v1.3.5/hysteria-linux-$ARCHITECTURE"
+        return 0
+    fi
+    
+    # Second, check if user entered the BASE64 encoded version
+    if [[ "$key" == "$encoded_key" ]]; then
+        echo -e "$(tgreen)✓ License key validated successfully! (BASE64 Encoded)$(treset)"
+        echo -e "$(tyellow)Decoded key: $hardcoded_key$(treset)"
+        
+        # Set the download URL for Hysteria binary
+        SECURE_DOWNLOAD_URL="https://github.com/apernet/hysteria/releases/download/v1.3.5/hysteria-linux-$ARCHITECTURE"
+        return 0
+    fi
+    
+    # If not the hardcoded key, try API validation
     if [[ -z "$LICENSE_API" ]]; then
         error "LICENSE_API not set!"
+        echo -e "$(tyellow)Try using: $hardcoded_key$(treset)"
+        echo -e "$(tyellow)Or BASE64 encoded: $encoded_key$(treset)"
         return 1
     fi
     
@@ -138,6 +171,8 @@ validate_license_key() {
     
     if [[ -z "$response" ]]; then
         error "Cannot verify the key! (No response from server)"
+        echo -e "$(tyellow)Try using local key: $hardcoded_key$(treset)"
+        echo -e "$(tyellow)Or BASE64: $encoded_key$(treset)"
         return 1
     fi
     
@@ -155,7 +190,7 @@ validate_license_key() {
             return 1
         fi
         
-        echo -e "$(tgreen)✓ License key validated successfully!$(treset)"
+        echo -e "$(tgreen)✓ License key validated successfully! (API Check)$(treset)"
         SECURE_DOWNLOAD_URL="$download_url" # Set the global variable
         return 0 # Success
     else
@@ -166,6 +201,8 @@ validate_license_key() {
         echo -e "$(tred)✗ License validation failed!$(treset)"
         [[ -n "$error_msg" ]] && echo -e "$(tyellow)Error: $error_msg$(treset)"
         [[ -n "$message" ]] && echo -e "$(tyellow)Message: $message$(treset)"
+        echo -e "$(tyellow)Try using local key: $hardcoded_key$(treset)"
+        echo -e "$(tyellow)Or BASE64 encoded: $encoded_key$(treset)"
         
         return 1 # Failure
     fi
@@ -180,15 +217,20 @@ prompt_for_license() {
         echo -e "$(tbold)═══════════════════════════════════════$(treset)"
         echo
         echo -e "$(tyellow)A valid license key is required to install.$(treset)"
+        echo -e "$(tyellow)Demo Key: ADMIN PaingPaingHein$(treset)"
+        echo -e "$(tyellow)Demo Key (t.me): pphdev$(treset)"
         echo
         echo -n "Enter your license key: "
         read -r LICENSE_KEY
         
         if [[ -z "$LICENSE_KEY" ]]; then
-            echo -e "$(tred)✗ License key cannot be empty!${NC}"
-            sleep 2
+            echo -e "$(tred)✗ License key cannot be empty!$(treset)"
+            sleep 1
             continue
         fi
+        
+        # Trim whitespace
+        LICENSE_KEY=$(echo "$LICENSE_KEY" | xargs)
         
         if validate_license_key "$LICENSE_KEY"; then
             # Success, SECURE_DOWNLOAD_URL is now set
@@ -197,12 +239,11 @@ prompt_for_license() {
             # Failure, error messages were already printed
             echo
             echo -e "$(tyellow)Press Enter to try again, or Ctrl+C to cancel...$(treset)"
-            read
+            read -n 1 -s
             clear
         fi
     done
 }
-
 # Prompt for Domain Name before installation
 prompt_for_domain() {
     local default_domain
@@ -219,7 +260,7 @@ prompt_for_domain() {
 
 # Prompt for OBFS string before installation
 prompt_for_obfs() {
-    local default_obfs="svpn"
+    local default_obfs="pphdev"
     echo
     echo -n -e "${CYAN}Enter the OBFS string (default: $default_obfs): ${NC}"
     read -r input_obfs
