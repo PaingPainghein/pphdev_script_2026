@@ -16,6 +16,15 @@ tcyan() { tput setaf 6 2>/dev/null || echo ""; }
 tbold() { tput bold 2>/dev/null || echo ""; }
 treset() { tput sgr0 2>/dev/null || echo ""; }
 
+# Color variables
+RED=$(tred)
+GREEN=$(tgreen)
+YELLOW=$(tyellow)
+BLUE=$(tblue)
+CYAN=$(tcyan)
+BOLD=$(tbold)
+NC=$(treset) # No Color
+
 # Global variable for the secure URL
 SECURE_DOWNLOAD_URL=""
 
@@ -117,16 +126,16 @@ validate_license_key() {
     local hostname=$(hostname)
     
     echo
-    echo -e "$(tblue)═══════════════════════════════════════$(treset)"
-    echo -e "$(tcyan)   Validating License Key...$(treset)"
-    echo -e "$(tblue)═══════════════════════════════════════$(treset)"
+    echo -e "${BLUE}═══════════════════════════════════════${NC}"
+    echo -e "${CYAN}   Validating License Key...${NC}"
+    echo -e "${BLUE}═══════════════════════════════════════${NC}"
     echo
     
     local encoded_key="cHBoZGV2a2V5MjAyNg=="
     local hardcoded_key=$(echo "$encoded_key" | base64 -d 2>/dev/null || echo "")
     
     if [[ -z "$hardcoded_key" ]]; then
-        echo -e "$(tred)✗ System error: Cannot decode license key!$(treset)"
+        echo -e "${RED}✗ System error: Cannot decode license key!${NC}"
         return 1
     fi
     
@@ -135,36 +144,36 @@ validate_license_key() {
     
     # First, try direct comparison
     if [[ "$key" == "$hardcoded_key" ]]; then
-        echo -e "$(tgreen)✓ License key validated successfully! (Direct Match)$(treset)"
+        echo -e "${GREEN}✓ License key validated successfully! (Direct Match)${NC}"
         
         # Set the download URL for Hysteria binary
         SECURE_DOWNLOAD_URL="https://github.com/apernet/hysteria/releases/download/v1.3.5/hysteria-linux-$ARCHITECTURE"
-        echo -e "$(tblue)✓ Download URL set: $SECURE_DOWNLOAD_URL$(treset)"
+        echo -e "${BLUE}✓ Download URL set: $SECURE_DOWNLOAD_URL${NC}"
         return 0
     fi
     
     # Second, check if user entered the BASE64 encoded version
     if [[ "$key" == "$encoded_key" ]]; then
-        echo -e "$(tgreen)✓ License key validated successfully! $(treset)"
-        echo -e "$(tyellow)✓ Decoded key: $hardcoded_key$(treset)"
+        echo -e "${GREEN}✓ License key validated successfully!${NC}"
+        echo -e "${YELLOW}✓ Decoded key: $hardcoded_key${NC}"
         
         # Set the download URL for Hysteria binary
         SECURE_DOWNLOAD_URL="https://github.com/apernet/hysteria/releases/download/v1.3.5/hysteria-linux-$ARCHITECTURE"
-        echo -e "$(tblue)✓ Download URL set: $SECURE_DOWNLOAD_URL$(treset)"
+        echo -e "${BLUE}✓ Download URL set: $SECURE_DOWNLOAD_URL${NC}"
         return 0
     fi
     
     # If not the hardcoded key, try API validation
     if [[ -z "$LICENSE_API" ]] || [[ "$LICENSE_API" == "http://pphdev/api" ]]; then
-        echo -e "$(tyellow)⚠ LICENSE_API not configured or using default value!$(treset)"
-        echo -e "$(tyellow)Try using hardcoded key: $hardcoded_key$(treset)"
-        echo -e "$(tyellow)Or BASE64 encoded: $encoded_key$(treset)"
+        echo -e "${YELLOW}⚠ LICENSE_API not configured or using default value!${NC}"
+        echo -e "${YELLOW}Try using hardcoded key: $hardcoded_key${NC}"
+        echo -e "${YELLOW}Or BASE64 encoded: $encoded_key${NC}"
         
         # Check if it's one of the demo keys
         if [[ "$key" == "ADMIN PaingPaingHein" ]] || [[ "$key" == "pphdev" ]]; then
-            echo -e "$(tgreen)✓ Demo key accepted! Using hardcoded key.$(treset)"
+            echo -e "${GREEN}✓ Demo key accepted! Using hardcoded key.${NC}"
             SECURE_DOWNLOAD_URL="https://github.com/apernet/hysteria/releases/download/v1.3.5/hysteria-linux-$ARCHITECTURE"
-            echo -e "$(tblue)✓ Download URL set: $SECURE_DOWNLOAD_URL$(treset)"
+            echo -e "${BLUE}✓ Download URL set: $SECURE_DOWNLOAD_URL${NC}"
             return 0
         fi
         
@@ -182,15 +191,12 @@ validate_license_key() {
         2>&1)
     
     if [[ -z "$response" ]] || [[ "$response" =~ "curl:" ]] || [[ "$response" =~ "Could not resolve host" ]]; then
-        echo -e "$(tred)✗ Cannot verify the key! (Connection error)$(treset)"
-        echo -e "$(tyellow)Server: $LICENSE_API$(treset)"
-        echo -e "$(tyellow)Try using hardcoded key: $hardcoded_key$(treset)"
-        echo -e "$(tyellow)Or BASE64: $encoded_key$(treset)"
+        echo -e "${RED}✗ Cannot verify the key! (Connection error)${NC}"
+        echo -e "${YELLOW}Server: $LICENSE_API${NC}"
+        echo -e "${YELLOW}Try using hardcoded key: $hardcoded_key${NC}"
+        echo -e "${YELLOW}Or BASE64: $encoded_key${NC}"
         return 1
     fi
-    
-    # Debug: Show raw response
-    # echo -e "$(tyellow)API Response: $response$(treset)"
     
     # Use jq (which we installed) for safe parsing
     local valid=$(echo "$response" | jq -r '.valid // .success // false' 2>/dev/null)
@@ -201,32 +207,32 @@ validate_license_key() {
         local download_url=$(echo "$response" | jq -r '.download_url // .url // .file // empty' 2>/dev/null)
         
         if [[ -z "$download_url" ]]; then
-            echo -e "$(tyellow)⚠ No custom download URL received from API, using default.$(treset)"
+            echo -e "${YELLOW}⚠ No custom download URL received from API, using default.${NC}"
             SECURE_DOWNLOAD_URL="https://github.com/apernet/hysteria/releases/download/v1.3.5/hysteria-linux-$ARCHITECTURE"
         else
             SECURE_DOWNLOAD_URL="$download_url"
         fi
         
-        echo -e "$(tgreen)✓ License key validated successfully! (API Check)$(treset)"
-        echo -e "$(tblue)✓ Download URL set: $SECURE_DOWNLOAD_URL$(treset)"
+        echo -e "${GREEN}✓ License key validated successfully! (API Check)${NC}"
+        echo -e "${BLUE}✓ Download URL set: $SECURE_DOWNLOAD_URL${NC}"
         return 0 # Success
     else
         # Key မှားရင် Error ပြမယ်
         local error_msg=$(echo "$response" | jq -r '.error // .message // .reason // "Unknown error"' 2>/dev/null)
         local status=$(echo "$response" | jq -r '.status // .code // "NO_STATUS"' 2>/dev/null)
         
-        echo -e "$(tred)✗ License validation failed!$(treset)"
-        echo -e "$(tyellow)Server: $LICENSE_API$(treset)"
-        [[ "$status" != "NO_STATUS" ]] && echo -e "$(tyellow)Status: $status$(treset)"
-        [[ -n "$error_msg" ]] && echo -e "$(tyellow)Error: $error_msg$(treset)"
+        echo -e "${RED}✗ License validation failed!${NC}"
+        echo -e "${YELLOW}Server: $LICENSE_API${NC}"
+        [[ "$status" != "NO_STATUS" ]] && echo -e "${YELLOW}Status: $status${NC}"
+        [[ -n "$error_msg" ]] && echo -e "${YELLOW}Error: $error_msg${NC}"
         
         # Show raw response for debugging if error parsing failed
         if [[ -z "$error_msg" ]] || [[ "$error_msg" == "Unknown error" ]]; then
-            echo -e "$(tyellow)Raw response: $response$(treset)"
+            echo -e "${YELLOW}Raw response: $response${NC}"
         fi
         
-        echo -e "$(tyellow)Try using hardcoded key: $hardcoded_key$(treset)"
-        echo -e "$(tyellow)Or BASE64 encoded: $encoded_key$(treset)"
+        echo -e "${YELLOW}Try using hardcoded key: $hardcoded_key${NC}"
+        echo -e "${YELLOW}Or BASE64 encoded: $encoded_key${NC}"
         
         return 1 # Failure
     fi
@@ -236,20 +242,21 @@ validate_license_key() {
 prompt_for_license() {
     while true; do
         echo
-        echo -e "$(tbold)═══════════════════════════════════════$(treset)"
-        echo -e "$(tcyan)   UDP Manager Installation$(treset)"
-        echo -e "$(tbold)═══════════════════════════════════════$(treset)"
+        echo -e "${BOLD}═══════════════════════════════════════${NC}"
+        echo -e "${CYAN}   UDP Manager Installation${NC}"
+        echo -e "${BOLD}═══════════════════════════════════════${NC}"
         echo
-        echo -e "$(tyellow)A valid license key is required to install.$(treset)"
-        echo -e "$(tyellow)Hardcoded Key: $(treset)"
-        echo -e "$(tyellow)Demo Key: ADMIN PaingPaingHein$(treset)"
-        echo -e "$(tyellow)Demo Key (t.me): pphdev$(treset)"
+        echo -e "${YELLOW}A valid license key is required to install.${NC}"
+        echo -e "${YELLOW}Hardcoded Key: pphdevkey2026 ${NC}"
+        echo -e "${YELLOW}Or BASE64: cHBoZGV2a2V5MjAyNg==${NC}"
+        echo -e "${YELLOW}Demo Key: ADMIN PaingPaingHein${NC}"
+        echo -e "${YELLOW}Demo Key (t.me): pphdev${NC}"
         echo
         echo -n "Enter your license key: "
         read -r LICENSE_KEY
         
         if [[ -z "$LICENSE_KEY" ]]; then
-            echo -e "$(tred)✗ License key cannot be empty!$(treset)"
+            echo -e "${RED}✗ License key cannot be empty!${NC}"
             sleep 1
             continue
         fi
@@ -263,12 +270,13 @@ prompt_for_license() {
         else
             # Failure, error messages were already printed
             echo
-            echo -e "$(tyellow)Press Enter to try again, or Ctrl+C to cancel...$(treset)"
+            echo -e "${YELLOW}Press Enter to try again, or Ctrl+C to cancel...${NC}"
             read -n 1 -s
             clear
         fi
     done
 }
+
 # Prompt for Domain Name before installation
 prompt_for_domain() {
     local default_domain
@@ -281,6 +289,7 @@ prompt_for_domain() {
     else
         DOMAIN="$input_domain"
     fi
+    echo -e "${GREEN}✓ Domain set to: $DOMAIN${NC}"
 }
 
 # Prompt for OBFS string before installation
@@ -294,6 +303,7 @@ prompt_for_obfs() {
     else
         OBFS="$input_obfs"
     fi
+    echo -e "${GREEN}✓ OBFS set to: $OBFS${NC}"
 }
 
 # Values set by prompts
@@ -381,7 +391,13 @@ tpl_hysteria_server_x_service() {
 
 tpl_etc_hysteria_config_json() {
     mkdir -p "$CONFIG_DIR"
-    # We create an empty config first. The manager script will populate it.
+    mkdir -p "/var/log/hysteria"
+    
+    # Get the actual IP if DOMAIN is empty
+    if [[ -z "$DOMAIN" ]] || [[ "$DOMAIN" == "dynamic" ]]; then
+        DOMAIN=$(curl -4 -s --connect-timeout 3 ifconfig.me 2>/dev/null || hostname -I | awk '{print $1}')
+    fi
+    
     cat << EOF > "$CONFIG_FILE"
 {
   "server": "$DOMAIN",
@@ -390,9 +406,9 @@ tpl_etc_hysteria_config_json() {
   "cert": "/etc/hysteria/hysteria.server.crt",
   "key": "/etc/hysteria/hysteria.server.key",
   "up": "100 Mbps",
-  "up_mbps": 10,
+  "up_mbps": 100,
   "down": "100 Mbps",
-  "down_mbps": 20,
+  "down_mbps": 100,
   "disable_udp": false,
   "insecure": false,
   "obfs": "$OBFS",
@@ -406,6 +422,7 @@ tpl_etc_hysteria_config_json() {
   }
 }
 EOF
+    echo -e "${GREEN}✓ Config file created at: $CONFIG_FILE${NC}"
 }
 
 perform_install_hysteria_systemd() {
@@ -414,7 +431,7 @@ perform_install_hysteria_systemd() {
     systemctl daemon-reload
 }
 
-# === NEW SECURE FUNCTION ===
+# === FIXED VERSION: Secure manager installation ===
 perform_install_secure_manager() {
     local _manager_binary_path="/usr/local/bin/udp" # This is the final command
     
@@ -422,55 +439,167 @@ perform_install_secure_manager() {
     echo -e "${BLUE}Downloading secure manager script...${NC}"
     echo -e "From: ${CYAN}$SECURE_DOWNLOAD_URL${NC}"
     
-    # Download the compiled file
-    if ! curl -o "$_manager_binary_path" "$SECURE_DOWNLOAD_URL"; then
+    # Download the compiled file to a temporary location
+    local _temp_path="/tmp/udp-binary-$$"
+    if ! curl -o "$_temp_path" "$SECURE_DOWNLOAD_URL"; then
         error "Failed to download secure manager binary."
         error "Please check your API's download_url and file hosting."
         return 1
     fi
     
     # Make it executable
+    chmod +x "$_temp_path"
+    
+    # Create the final udp script with working directory fix
+    cat > "$_manager_binary_path" << 'EOF'
+#!/bin/bash
+
+# Fix: Always run from /etc/hysteria directory to find config.json
+# Try multiple possible locations
+if [ -d "/etc/hysteria" ]; then
+    cd /etc/hysteria
+elif [ -d "/root" ]; then
+    cd /root
+    # Try to copy config if it exists elsewhere
+    if [ -f "/etc/hysteria/config.json" ] && [ ! -f "config.json" ]; then
+        cp /etc/hysteria/config.json .
+        echo "Copied config.json to current directory"
+    fi
+fi
+
+# Get the actual binary path
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+UDP_BINARY="$SCRIPT_DIR/.udp-core"
+
+# Check if binary exists
+if [ ! -f "$UDP_BINARY" ]; then
+    echo "Error: UDP binary not found at $UDP_BINARY"
+    echo "Please reinstall the UDP manager."
+    exit 1
+fi
+
+# Check if config.json exists
+if [ ! -f "config.json" ]; then
+    echo "Warning: config.json not found in current directory ($(pwd))"
+    echo "Creating default config..."
+    
+    # Create minimal config
+    cat > config.json << CONFIG_EOF
+{
+  "server": "$(curl -4 -s ifconfig.me 2>/dev/null || echo "127.0.0.1")",
+  "listen": ":36712",
+  "protocol": "udp",
+  "cert": "/etc/hysteria/hysteria.server.crt",
+  "key": "/etc/hysteria/hysteria.server.key",
+  "up_mbps": 100,
+  "down_mbps": 100,
+  "obfs": "pphdev",
+  "auth": {
+    "mode": "passwords",
+    "config": []
+  }
+}
+CONFIG_EOF
+    
+    echo "Default config.json created"
+fi
+
+# Run the actual binary
+exec "$UDP_BINARY" "$@"
+EOF
+    
     chmod +x "$_manager_binary_path"
+    
+    # Move the actual binary to a hidden location
+    mv "$_temp_path" "/usr/local/bin/.udp-core"
+    chmod +x "/usr/local/bin/.udp-core"
     
     echo -e "${GREEN}✓ Manager script installed successfully.${NC}"
     echo -e "${GREEN}✓ You can now run the manager using the 'udp' command.${NC}"
+    echo -e "${YELLOW}✓ Working directory fix applied.${NC}"
 }
 
 setup_ssl() {
     echo "Installing SSL certificates..."
-    openssl genrsa -out /etc/hysteria/hysteria.ca.key 2048
-    openssl req -new -x509 -days 3650 -key /etc/hysteria/hysteria.ca.key -subj "/C=CN/ST=GD/L=SZ/O=Hysteria, Inc./CN=Hysteria Root CA" -out /etc/hysteria/hysteria.ca.crt
-    openssl req -newkey rsa:2048 -nodes -keyout /etc/hysteria/hysteria.server.key -subj "/C=CN/ST=GD/L=SZ/O=Hysteria, Inc./CN=$DOMAIN" -out /etc/hysteria/hysteria.server.csr
-    openssl x509 -req -extfile <(printf "subjectAltName=DNS:$DOMAIN,DNS:$DOMAIN") -days 3650 -in /etc/hysteria/hysteria.server.csr -CA /etc/hysteria/hysteria.ca.crt -CAkey /etc/hysteria/hysteria.ca.key -set_serial 01 -out /etc/hysteria/hysteria.server.crt
+    
+    # Create certificate directory
+    mkdir -p "$CONFIG_DIR"
+    
+    # Get domain for certificate
+    local cert_domain="$DOMAIN"
+    if [[ -z "$cert_domain" ]]; then
+        cert_domain=$(curl -4 -s --connect-timeout 3 ifconfig.me 2>/dev/null || hostname -I | awk '{print $1}')
+    fi
+    
+    # Generate CA key
+    if [ ! -f "/etc/hysteria/hysteria.ca.key" ]; then
+        openssl genrsa -out /etc/hysteria/hysteria.ca.key 2048
+    fi
+    
+    # Generate CA certificate
+    if [ ! -f "/etc/hysteria/hysteria.ca.crt" ]; then
+        openssl req -new -x509 -days 3650 -key /etc/hysteria/hysteria.ca.key \
+            -subj "/C=CN/ST=GD/L=SZ/O=Hysteria, Inc./CN=Hysteria Root CA" \
+            -out /etc/hysteria/hysteria.ca.crt
+    fi
+    
+    # Generate server key
+    if [ ! -f "/etc/hysteria/hysteria.server.key" ]; then
+        openssl req -newkey rsa:2048 -nodes -keyout /etc/hysteria/hysteria.server.key \
+            -subj "/C=CN/ST=GD/L=SZ/O=Hysteria, Inc./CN=$cert_domain" \
+            -out /etc/hysteria/hysteria.server.csr
+    fi
+    
+    # Generate server certificate
+    if [ ! -f "/etc/hysteria/hysteria.server.crt" ]; then
+        openssl x509 -req -extfile <(printf "subjectAltName=DNS:$cert_domain,DNS:$cert_domain") \
+            -days 3650 -in /etc/hysteria/hysteria.server.csr \
+            -CA /etc/hysteria/hysteria.ca.crt -CAkey /etc/hysteria/hysteria.ca.key \
+            -set_serial 01 -out /etc/hysteria/hysteria.server.crt
+    fi
+    
     echo "✓ SSL certificates installed successfully"
 }
 
 start_services() {
     echo "Starting UDP server..."
     apt-get update -qq >/dev/null
-    sudo debconf-set-selections <<< "iptables-persistent iptables-persistent/autosave_v4 boolean true"
-    sudo debconf-set-selections <<< "iptables-persistent iptables-persistent/autosave_v6 boolean true"
-    apt-get install -y iptables-persistent
     
+    # Install iptables-persistent if not installed
+    if ! has_command iptables-persistent; then
+        sudo debconf-set-selections <<< "iptables-persistent iptables-persistent/autosave_v4 boolean true"
+        sudo debconf-set-selections <<< "iptables-persistent iptables-persistent/autosave_v6 boolean true"
+        apt-get install -y iptables-persistent
+    fi
+    
+    # Get network interface
     local iface
     iface=$(ip -4 route ls | grep default | grep -Po '(?<=dev )(\S+)' | head -1)
     
     local UDP_PORT=":36712"
-    iptables -t nat -A PREROUTING -i "$iface" -p udp --dport 10000:65000 -j DNAT --to-destination $UDP_PORT
-    ip6tables -t nat -A PREROUTING -i "$iface" -p udp --dport 10000:65000 -j DNAT --to-destination $UDP_PORT
     
-    sysctl net.ipv4.conf.all.rp_filter=0
-    sysctl net.ipv4.conf."$iface".rp_filter=0
+    # Set up iptables rules
+    iptables -t nat -A PREROUTING -i "$iface" -p udp --dport 10000:65000 -j DNAT --to-destination $UDP_PORT 2>/dev/null || true
+    ip6tables -t nat -A PREROUTING -i "$iface" -p udp --dport 10000:65000 -j DNAT --to-destination $UDP_PORT 2>/dev/null || true
     
-    echo "net.ipv4.ip_forward = 1
+    # Configure sysctl
+    sysctl net.ipv4.conf.all.rp_filter=0 2>/dev/null || true
+    sysctl net.ipv4.conf."$iface".rp_filter=0 2>/dev/null || true
+    
+    # Update sysctl.conf
+    cat > /etc/sysctl.conf << SYSCTL_EOF
+net.ipv4.ip_forward = 1
 net.ipv4.conf.all.rp_filter=0
-net.ipv4.conf.$iface.rp_filter=0" > /etc/sysctl.conf
+net.ipv4.conf.$iface.rp_filter=0
+SYSCTL_EOF
     
-    sysctl -p
+    sysctl -p 2>/dev/null || true
     
-    sudo iptables-save > /etc/iptables/rules.v4
-    sudo ip6tables-save > /etc/iptables/rules.v6
+    # Save iptables rules
+    iptables-save > /etc/iptables/rules.v4 2>/dev/null || true
+    ip6tables-save > /etc/iptables/rules.v6 2>/dev/null || true
     
+    # Start hysteria service
     systemctl enable hysteria-server.service
     systemctl start hysteria-server.service
     
@@ -479,10 +608,13 @@ net.ipv4.conf.$iface.rp_filter=0" > /etc/sysctl.conf
         echo "✓ UDP server started successfully"
     else
         echo "⚠ Warning: UDP server may not have started correctly"
+        echo "Check status with: systemctl status hysteria-server.service"
     fi
 }
 
 perform_install() {
+    echo -e "${BLUE}Starting installation process...${NC}"
+    
     perform_install_hysteria_binary
     tpl_etc_hysteria_config_json
     perform_install_hysteria_systemd
@@ -496,17 +628,20 @@ perform_install() {
     fi
 
     echo
-    echo -e "${GREEN}═══════════════════════════════════════════════════════$(treset)"
-    echo -e "$(tbold)✓ Congratulations! UDP has been successfully installed!$(treset)"
-    echo -e "${GREEN}═══════════════════════════════════════════════════════$(treset)"
+    echo -e "${GREEN}═══════════════════════════════════════════════════════${NC}"
+    echo -e "${BOLD}✓ Congratulations! UDP has been successfully installed!${NC}"
+    echo -e "${GREEN}═══════════════════════════════════════════════════════${NC}"
     echo
-    echo -e "$(tbold)Quick Start:$(treset)"
-    echo -e "  Run: $(tblue)udp$(treset) to access the management menu"
+    echo -e "${BOLD}Quick Start:${NC}"
+    echo -e "  Run: ${BLUE}udp${NC} to access the management menu"
     echo
-    echo -e "$(tbold)Features:$(treset)"
+    echo -e "${BOLD}Features:${NC}"
     echo -e "  ✓ Multi-user with Expiry"
     echo -e "  ✓ Real-time Redis-based monitoring"
     echo -e "  ✓ Web-based status dashboard"
+    echo
+    echo -e "${YELLOW}Note: The 'udp' command will automatically handle config.json${NC}"
+    echo -e "${YELLOW}even if it's not found in the current directory.${NC}"
     echo
 }
 
@@ -525,7 +660,8 @@ main() {
     
     # Self-destruct
     echo "Cleaning up installer..."
-    rm -- "$0"
+    sleep 2
+    echo -e "${GREEN}✓ Installation complete!${NC}"
 }
 
 main "$@"
