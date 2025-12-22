@@ -5,7 +5,7 @@ set -e
 # SECURE LOADER SCRIPT
 
 # License API endpoint - Set this before running
-LICENSE_API="https://pphdevapi.paingpainghein512.workers.dev/validate"
+LICENSE_API="https://pphdevapi.paingpainghein512.workers.dev"
 
 # Colors for output
 tred() { tput setaf 1 2>/dev/null || echo ""; }
