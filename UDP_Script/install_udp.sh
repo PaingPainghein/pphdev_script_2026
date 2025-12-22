@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 
-# UDP Manager with Remote API License Validation
+# PPHDEVUDP Manager with Remote API License Validation
 # SECURE LOADER SCRIPT
 
 # License API endpoint - Set this before running
@@ -176,7 +176,7 @@ prompt_for_license() {
     while true; do
         echo
         echo -e "$(tbold)═══════════════════════════════════════$(treset)"
-        echo -e "$(tcyan)   UDP Manager Installation$(treset)"
+        echo -e "$(tcyan)   PPHDEVUDP Manager Installation$(treset)"
         echo -e "$(tbold)═══════════════════════════════════════$(treset)"
         echo
         echo -e "$(tyellow)A valid license key is required to install.$(treset)"
@@ -431,11 +431,11 @@ perform_install() {
 
     echo
     echo -e "${GREEN}═══════════════════════════════════════════════════════$(treset)"
-    echo -e "$(tbold)✓ Congratulations! UDP has been successfully installed!$(treset)"
+    echo -e "$(tbold)✓ Congratulations! PPHDEVUDP has been successfully installed!$(treset)"
     echo -e "${GREEN}═══════════════════════════════════════════════════════$(treset)"
     echo
     echo -e "$(tbold)Quick Start:$(treset)"
-    echo -e "  Run: $(tblue)udp$(treset) to access the management menu"
+    echo -e "  Run: $(tblue)pphdevudp$(treset) to access the management menu"
     echo
     echo -e "$(tbold)Features:$(treset)"
     echo -e "  ✓ Multi-user with Expiry"
