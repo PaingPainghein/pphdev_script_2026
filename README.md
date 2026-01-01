@@ -14,9 +14,9 @@ Ubuntu 20 | Ubuntu 22+
 apt-get remove command-not-found -y && wget https://pphdevscript.netlify.app/UDP_Script/install_udp.sh && chmod +x install_udp.sh; ./install_udp.sh
 ```
 
-# X-UI Panel 
+# X-UI Panel English
 ## 📖: Recommended OS
-OS: Ubuntu 20 English | Debian 11
+OS: Ubuntu 20  | Debian 11
 ```
 apt-get remove command-not-found -y && wget https://pphdevscript.netlify.app/UDP_Script/install_udp.sh && chmod +x install_udp.sh; ./install_udp.sh
 ```
